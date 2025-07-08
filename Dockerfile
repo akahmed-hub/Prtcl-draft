@@ -7,8 +7,8 @@ WORKDIR /app/frontend
 # Copy frontend package files
 COPY frontend/package*.json ./
 
-# Install frontend dependencies
-RUN npm ci --only=production --legacy-peer-deps
+# Install frontend dependencies (use npm install since package-lock.json doesn't exist)
+RUN npm install --legacy-peer-deps
 
 # Copy frontend source code
 COPY frontend/ .
@@ -39,7 +39,6 @@ COPY backend/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install gunicorn
 
 # Copy backend source code
 COPY backend/ .

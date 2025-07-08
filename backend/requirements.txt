@@ -6,6 +6,9 @@ django-filter==23.3
 django-extensions==3.2.3
 drf-nested-routers==0.93.4
 
+# Production Server
+gunicorn==21.2.0
+
 # Database
 psycopg2-binary==2.9.7
 dj-database-url==2.1.0

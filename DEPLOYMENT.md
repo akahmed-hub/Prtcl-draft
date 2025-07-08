@@ -132,6 +132,18 @@ python manage.py createsuperuser
 3. **Static Files**: Ensure `collectstatic` runs during deployment
 4. **CORS Errors**: Update `CORS_ALLOWED_ORIGINS` in production settings
 
+### Specific Errors:
+
+#### npm ci Error:
+If you see an error like "npm ci command can only install with an existing package-lock.json":
+- The Dockerfile has been updated to use `npm install` instead of `npm ci`
+- This is fixed in the latest version
+
+#### Gunicorn Not Found:
+If you see "gunicorn: command not found":
+- Gunicorn has been added to requirements.txt
+- Make sure you're using the latest code
+
 ### Debugging:
 
 1. Check Render logs in the dashboard
