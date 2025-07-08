@@ -1,0 +1,42 @@
+services:
+  # Main web service
+  - type: web
+    name: prtcltech-app
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: /app/start.sh
+    plan: starter
+    region: oregon
+    healthCheckPath: /
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: prtcltech.settings
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        value: .onrender.com
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false
+    buildFilter:
+      paths:
+        - frontend/**
+        - backend/**
+        - Dockerfile
+        - render.yaml
+
+databases:
+  # PostgreSQL database
+  - name: prtcltech-db
+    databaseName: prtcltech
+    user: prtcltech
+    plan: starter
+    region: oregon
+
+  # Redis for Celery
+  - name: prtcltech-redis
+    databaseName: redis
+    plan: starter
+    region: oregon
+    maxmemoryPolicy: allkeys-lru 
