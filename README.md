@@ -117,4 +117,4 @@ The API documentation is available at `/api/docs/` when running the development 
 
 ## License
 
-MIT License 
+MIT License
