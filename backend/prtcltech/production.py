@@ -61,13 +61,12 @@ SECURE_HSTS_PRELOAD = True
 
 # CORS settings for production
 CORS_ALLOWED_ORIGINS = [
-    "https://your-app-name.onrender.com",  # Replace with your actual Render URL
+    "https://prtcl-draft.onrender.com",
+    "http://prtcl-draft.onrender.com",
 ]
 
-# Add your custom domain to CORS if you have one
-if config('CUSTOM_DOMAIN', default=''):
-    CORS_ALLOWED_ORIGINS.append(f"https://{config('CUSTOM_DOMAIN')}")
-
+# Allow all subdomains of onrender.com
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 
 # Logging configuration for production

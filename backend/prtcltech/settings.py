@@ -15,7 +15,9 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,prtcl-draft.onrender.com,.onrender.com').split(',')
+# Get ALLOWED_HOSTS from environment or use comprehensive defaults
+ALLOWED_HOSTS_STR = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,prtcl-draft.onrender.com,.onrender.com')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
 
 # Application definition
 INSTALLED_APPS = [
@@ -147,6 +149,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:3001",
     "http://127.0.0.1:3001",
+    "https://prtcl-draft.onrender.com",
+    "http://prtcl-draft.onrender.com",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
