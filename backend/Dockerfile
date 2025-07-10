@@ -1,54 +1,121 @@
-FROM python:3.11-slim
+# Multi-stage build for production deployment on Render
+FROM node:18-alpine AS frontend-builder
+
+# Set work directory for frontend
+WORKDIR /app/frontend
+
+# Copy frontend package files first (for better caching)
+COPY frontend/package*.json ./
+
+# Install frontend dependencies
+RUN npm ci --only=production --legacy-peer-deps
+
+# Copy frontend source code
+COPY frontend/ .
+
+# Build frontend for production
+RUN npm run build
+
+# Python backend stage
+FROM python:3.11-slim AS backend-builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Set work directory
-WORKDIR /app
-
-# Install system dependencies
+# Install only essential system dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        postgresql-client \
-        build-essential \
         libpq-dev \
-        libffi-dev \
-        libssl-dev \
-        libjpeg-dev \
-        libpng-dev \
-        libtiff-dev \
-        libwebp-dev \
-        libopenexr-dev \
-        libgstreamer1.0-dev \
-        libgstreamer-plugins-base1.0-dev \
-        libgstreamer-plugins-bad1.0-dev \
-        gstreamer1.0-plugins-base \
-        gstreamer1.0-plugins-good \
-        gstreamer1.0-plugins-bad \
-        gstreamer1.0-plugins-ugly \
-        gstreamer1.0-libav \
-        gstreamer1.0-tools \
-        gstreamer1.0-x \
-        gstreamer1.0-alsa \
-        gstreamer1.0-gl \
-        gstreamer1.0-gtk3 \
-        gstreamer1.0-qt5 \
-        gstreamer1.0-pulseaudio \
+        gcc \
     && rm -rf /var/lib/apt/lists/*
 
+# Set work directory for backend
+WORKDIR /app/backend
+
+# Copy requirements first (for better caching)
+COPY backend/requirements.txt .
+
 # Install Python dependencies
-COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
-COPY . /app/
+# Copy backend source code
+COPY backend/ .
 
-# Create media directory
-RUN mkdir -p /app/media
+# Final production stage
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+# REMOVED: ENV DJANGO_SETTINGS_MODULE=prtcltech.settings
+# This allows Render's environment variable to control the settings module
+
+# Install minimal system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libpq5 \
+        nginx \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy Python dependencies from backend stage
+COPY --from=backend-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=backend-builder /usr/local/bin /usr/local/bin
+
+# Copy backend application
+COPY --from=backend-builder /app/backend /app/backend
+
+# Copy built frontend from frontend stage
+COPY --from=frontend-builder /app/frontend/build /app/static
+
+# Create nginx configuration
+RUN echo 'server { \
+    listen 80; \
+    server_name _; \
+    \
+    # Serve static files (React build) \
+    location / { \
+        root /app/static; \
+        try_files $uri $uri/ /index.html; \
+    } \
+    \
+    # Proxy API requests to Django \
+    location /api/ { \
+        proxy_pass http://127.0.0.1:8000; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+        proxy_set_header X-Forwarded-Proto $scheme; \
+    } \
+    \
+    # Proxy admin and other Django URLs \
+    location /admin/ { \
+        proxy_pass http://127.0.0.1:8000; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+        proxy_set_header X-Forwarded-Proto $scheme; \
+    } \
+}' > /etc/nginx/sites-available/default
+
+# Create startup script
+RUN echo '#!/bin/bash \n\
+# Start Django with Gunicorn in background \n\
+cd /app/backend \n\
+python manage.py migrate --noinput \n\
+python manage.py collectstatic --noinput \n\
+gunicorn prtcltech.wsgi:application --bind 127.0.0.1:8000 --workers 2 --timeout 120 & \n\
+\n\
+# Start nginx in foreground \n\
+nginx -g "daemon off;"' > /app/start.sh
+
+RUN chmod +x /app/start.sh
 
 # Expose port
-EXPOSE 8000
+EXPOSE 80
 
-# Run the application
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"] 
+# Start the application
+CMD ["/app/start.sh"] 
