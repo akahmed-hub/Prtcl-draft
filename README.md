@@ -15,7 +15,7 @@ A comprehensive web application for biological research protocol building, data 
 - **Backend**: Django with Django REST Framework
 - **Database**: PostgreSQL
 - **Task Queue**: Celery with Redis
-- **LLM Integration**: Anthropic Claude API
+- **LLM Integration**: Google Gemini API
 - **Containerization**: Docker
 
 ## Quick Start
@@ -78,8 +78,8 @@ DATABASE_URL=postgresql://user:password@localhost:5432/prtcltech
 # Redis
 REDIS_URL=redis://localhost:6379
 
-# Anthropic API
-ANTHROPIC_API_KEY=your-anthropic-api-key
+# Google Gemini API
+GEMINI_API_KEY=your-gemini-api-key
 
 # AWS S3 (for file storage)
 AWS_ACCESS_KEY_ID=your-aws-key

@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 from django.conf import settings
 from django.utils import timezone
 from .models import Protocol, ProtocolStep, Reagent, ResearchPaper
-import anthropic
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,8 @@ class LLMService:
     """Service for interacting with LLM APIs."""
     
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
     
     def generate_protocol(self, prompt: str, include_reagents: bool = True, 
                          include_reasoning: bool = True, max_steps: int = 20) -> Dict[str, Any]:
@@ -33,21 +34,12 @@ class LLMService:
             # Construct the system prompt
             system_prompt = self._build_system_prompt(include_reagents, include_reasoning, max_steps)
             
-            # Generate protocol using Claude
-            response = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
-                max_tokens=4000,
-                system=system_prompt,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ]
-            )
+            # Generate protocol using Gemini
+            full_prompt = f"{system_prompt}\n\nUser Request: {prompt}"
+            response = self.model.generate_content(full_prompt)
             
             # Parse the response
-            content = response.content[0].text
+            content = response.text
             protocol_data = self._parse_llm_response(content)
             
             return protocol_data
@@ -102,7 +94,8 @@ Guidelines:
 - If include_reasoning is true, provide reasoning for each step
 - Include alternatives when there are conflicting parameters from different sources
 - Be specific about concentrations, temperatures, and times
-- Use standard biological terminology"""
+- Use standard biological terminology
+- Respond with ONLY the JSON output, no additional text"""
         
         return prompt
     
@@ -165,7 +158,7 @@ class ProtocolService:
             title=protocol_data.get('title', 'Generated Protocol'),
             description=protocol_data.get('description', ''),
             original_prompt=prompt,
-            llm_model_used='claude-3-sonnet-20240229',
+            llm_model_used='gemini-1.5-flash',
             generation_timestamp=timezone.now()
         )
         

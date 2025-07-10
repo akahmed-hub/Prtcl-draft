@@ -17,7 +17,7 @@ services:
         value: .onrender.com
       - key: SECRET_KEY
         generateValue: true
-      - key: ANTHROPIC_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
     buildFilter:
       paths:
